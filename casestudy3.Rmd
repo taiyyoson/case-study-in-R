@@ -1,0 +1,272 @@
+---
+title: "BSDS 100: Case Study 3"
+author: "Taiyo Williamson, Alexis Leherr, Alessandro Barrera"
+output:
+  pdf_document: default
+  html_document: default
+date: "November 21, 2023"
+header-includes: 
+- \pagenumbering{gobble}
+- \AtBeginDocument{\let\maketitle\relax}
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+
+
+library(tidyverse)
+library(stringr)
+library(ggplot2)
+library(ggpubr)
+data = read.csv("mlb09.csv")
+
+```
+
+## *Case Study 3*
+
+# Authors: Taiyo Williamson, Alexis Leherr, Alessandro Barrera
+
+
+## **Instructions: **
+Get into groups of 3 and answer the following questions. Submit your knitted report as a pdf/html file and include the original .Rmd file also. Submit one report per group with all members' names on it before the end of class.  You currently have the fundamental R tools to complete this exercise, but you will may still have to explore new
+techniques and packages.  **For each question, write the name of the team member who answered/coded it.**
+
+### 1. 	Regression Modeling & Functional Programming
+
+The movie Moneyball is about how proper use of statistics in baseball (called ``sabermetrics") can bring unexpected success to a low-ranked, low-budget team. In it, the manager of the Oakland A's believes that (then) unpopular statistics, like a player's ability to get on base, can predict the team's ability to score runs better than traditional statistics, such as homerun counts and batting averages. By recruiting players who scored high in these underused statistics, he was able to improve the record of the team without needing to spend exorbitant amounts of money on the more mainstream players.
+	
+We will examine the data from the 30 MLB teams during the 2009 season. We will search for linear relationships between potential explanatory variables and the response variable: the number of runs scored in a season, which we treat as a measure of ``success" for this data analysis. You don't need to know the rules of baseball to understand this question, but if you would like a refresher you can check out Wikipedia: 	https://en.wikipedia.org/wiki/Baseball_rules#Gameplay
+	
+In addition to runs scored, there are seven traditionally-used variables in the data set: at-bats, hits, homeruns, batting average, strikeouts, walks and stolen bases. The last three variables in the data set are "nontraditional": on-base percentage, slugging percentage, and on base plus slugging.
+	
+	
+**Done by Taiyo**
+(a) Import the 2009 MLB dataset into R Studio. The dataset can be found on Canvas in the file "mlb09.csv". Using `ggplot`, plot  `at_bats` on the x-axis and  `runs` on the y-axis. Describe the relationship between the two variables in terms of direction (positively or negatively correlated), shape (linear? quadratic? exponential?) and strength. How confident would you rate your ability to predict a team's season runs scored, if you just knew the team's at-bats?
+	
+```{r}
+ggplot(data, aes(at_bats, runs)) + 
+  geom_point() + 
+  ggtitle("Runs vs At-bats") +
+  xlab ("At-Bats") +
+  ylab ("Runs")
+```
+
+The relationship between `at_bats` and `runs` is positively correlated with a somewhat-linear shape. There is a relatively neutral strength (y=ax + b, x =~ 1). I would say I am about 90% confident I could predict a team's season runs scored, only knowing the team's at-bats.
+
+
+**Done by Taiyo**	
+(b) Fit the regression of  `runs` onto  `at_bats`. Write the equation for the least squares regression line (LSRL,  aka "best fit line") and interpret the intercept and the slope in the context of the problem.
+	
+		
+```{r}
+ggplot(data, aes(at_bats, runs)) + 
+  geom_point() + 
+  ggtitle("Runs vs At-bats w/Linear Regression") +
+  xlab ("At-Bats") +
+  ylab ("Runs") + 
+  geom_smooth(method="lm") + 
+  stat_regline_equation()
+
+lmLine = lm(runs~at_bats, data=data)
+lmLine
+```
+The slope is ~ 0.6044 and the y-intercept is about -2594.0311.
+
+	
+
+**Done by Taiyo**
+(c) Identify the coefficient of determination for this regression. Interpret $R^2$ in terms of the regression.
+
+```{r}
+summary(lmLine)#0.362
+```
+
+The coefficient of determination for this regression is the multiple R-squared value, which is $0.362$. The $R^2$ statistic measures the strength of the linear relationship relative to the regression.
+	
+	
+**Done by Taiyo**
+(d) Create the residual plot and discuss what it indicates. Does the plot suggest linearity or not? Do we suspect anything wrong with our model? 
+	
+```{r}
+data$residuals = residuals(lmLine)
+str(data)
+ggplot(data, aes(at_bats, residuals)) + 
+  geom_hline(aes(yintercept=0), color="green") + 
+  geom_point() +
+  geom_segment(aes(xend=at_bats, yend=0), color="red")
+```
+
+The plot suggests linearity; since the points are scattered pretty randomly around the residual line `y=0`, it means our linear model is appropriate without skewing towards one input. `geom_segment` shows that the distance from the residual line for each point is random.
+	
+
+**Done by Taiyo**
+(e) Suppose the manager of a team comes and asks you to predict how many runs his team will score if they get 5000 at-bats, 5500 at-bats, and 6000 at-bats. Write a function which takes these inputs as arguments and returns the predicted values according to the regression line. Implement defensive programming to ensure that you receive the expected input; write a descriptive error (or multiple, if different cases needed) to throw if this is not the case.
+	
+```{r}
+data$predicted = predict(lmLine) #unnecessary, I'm just doing this cuz I want to
+
+atbatpredict = function(x) {
+  tryCatch(
+    {
+      return (0.6044*x - 2594.0311)
+    },
+    error = function(e) {
+      message("Invalid input, ERROR")
+    },
+    warning = function(w) {
+      warning("A warning was called")
+      warning(w)
+    }
+    )
+}
+#test case for implemented defensive programming
+atbatpredict("abcdefg")
+
+```
+	
+
+**Done by Taiyo**
+(f) Use your function from (e) to predict how many runs his team will score if they get 5000 at-bats, 5500 at-bats, and 6000 at-bats (3 separate predictions). Be sure to caution him if you have any hesitance with your ability to perform any one of these predictions.
+
+```{r}
+#predicted values
+atbatpredict(c(5000,5500,6000))
+
+```
+Since my linear model is based off of `mlb09.csv` with `at_bats` range `r range(data$at_bats)`, any potential inputs that are outside this range may be less accurate when predicting the number of runs. In this case, 5000 and 6000 at-bats are outisde of the range, so I am more hesitant in my ability to perform predictions for these 2 inputs.
+	
+
+**Done by Alexis**	
+(g) Suppose a rival team coach claims that `strikeouts` are the most important factor in scoring runs. Investigate his claim by creating the scatterplot of `strikeouts` vs. `runs`. Make an argument as to whether he is correct or not. Fit a regression and use the coefficient of determination to bolster your argument.
+	
+```{r}
+mlb_plot = ggplot(data, aes(x = strikeouts, y = runs,))+ 
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE)+
+  stat_regline_equation()
+mlb_plot
+corelation_coefficient =cor(data$strikeouts, data$runs)
+coeffincient_determination = corelation_coefficient^2
+coeffincient_determination
+```
+Strikeouts are not the most important factor in scoring runs. The line of best fit has a slop of 0.017 which is close to 0 and the coefficient of determination is close to 0.0, which support the claim that there is not a correlation between the strikeouts and runs. 
+	
+
+**Alessandro**
+(h) We want to determine which of the 7 traditional variables (at-bats, hits, homeruns, batting average, strikeouts, walks, and stolen bases) best predicts `runs` with a linear model, by investigating their relationship to `runs`  one at a time, visually. Write a function which creates the scatterplot and line of best fit for any given variable on the x-axis and `runs` on the y-axis. For the output of the function, return the scatterplot saved as a ggplot object.
+	
+	Implement defensive programming to ensure that you receive the expected input; write a descriptive error (or multiple, if different cases needed) to throw if this is not the case. (Hint: If you want to pass a string as an argument and have it recognized as a variable inside a function, use the `get()` function. See example below, noting that the x-axis in the resulting plot would need to have its label changed.)
+	
+	
+```{r}
+ex_function = function(col){
+  gg = ggplot(iris, aes(x = get(col))) + 
+    geom_histogram(bins = 10)
+  return(gg)
+}
+
+ex_function("Sepal.Length")
+```
+
+
+```{r}
+best_fit = function(col){
+  if (col %in% colnames(data)){
+    gg = ggplot(data, aes(x = get(col), y = runs)) + 
+      geom_point() + xlab(col) +
+      geom_smooth(method = "lm", se = FALSE)
+    return(gg)
+  } else {
+    stop("Error: Column not in data")
+  }
+}
+```
+	
+
+**Alessandro**
+(i) Now we want to which of the 7 traditional variables (at-bats, hits, homeruns, batting average, strikeouts, walks, and stolen bases) best predicts `runs` with a linear model, by investigating their relationship to `runs`  one at a time, *statistically*. 
+	
+Write a function which fits a linear model and returns the $R^2$ value for any given variable on the x-axis and `runs` on the y-axis. For the output of the function, return a list of the $R^2$ values that result from regressing `runs` onto each variable. 
+
+```{r}
+best_linear_model = function(col){
+  if (col %in% colnames(data)){
+    model = lm(runs ~ get(col), data = data)
+    r_squared = summary(model)$r.squared
+    return(r_squared)
+  } else {
+    stop("Error: Column not in data")
+  }
+}
+```
+	
+	
+**Alessandro**
+(j) Apply your functions from (h) and (i) to the dataset *by using a for loop* over the 7 traditional variables. Which seems to be best for predicting `runs`? Be sure to argue why you think your variable is best, using numeric and graphical evidence.
+
+```{r}
+seven_traditional_values = c("at_bats", "hits", "homeruns", "bat_avg", "strikeouts", "walks", "stolen_bases")
+
+r_squared_values = c()
+for (i in seven_traditional_values){
+  r_squared_values = c(r_squared_values, best_linear_model(i))
+}
+
+plots = list()
+for (i in seven_traditional_values){
+  plots[[i]] = best_fit(i)
+}
+
+r_squared_values
+plots
+
+
+```
+The best variable for predicting runs is hits. Because it has the highest R^2 value, it is the best predictor of runs. The graph shows a positive linear relationship between hits and runs.
+
+
+**Alessandro**
+(k) Apply your functions from (h) & (i) to the dataset *without using a for loop* but still using functional programming (i.e. do not repeat yourself!) over the 7 traditional variables. Which seems to be best for predicting `runs`? Does it agree with your results from (j)?
+
+
+```{r}
+seven_traditional_values = c("at_bats", "hits", "homeruns", "bat_avg", "strikeouts", "walks", "stolen_bases")
+
+r_squared_values = lapply(seven_traditional_values, best_linear_model)
+plots = lapply(seven_traditional_values, best_fit)
+
+r_squared_values
+plots
+```
+
+The variable that seems best for predicting runs is hits. Because it has the highest R^2 value, it is the best predictor of runs. The graph shows a positive linear relationship between hits and runs. This agrees with the results from (j).
+	
+	
+	
+**Done by Alexis**	
+(l) Now imagine you are the manager of the Oakland A's in the early 2000s when Moneyball was set. You suspect that the three "non-traditional" statistics (on-base percentage, slugging percentage, and on-base plus slugging) will give you a leg up on the competition. In general, are they better or worse at predicting `runs` than the traditional variables?  Which of the 3 is best? Is it better at predicting than the best "traditional" variable you found in (h)? How do you know?
+
+```{r}
+correlation_stat = function(col_name){
+  corelation_coefficient =cor(col_name, data$runs)
+  coeffincient_determination = corelation_coefficient^2
+  return(coeffincient_determination)
+}
+correlation_stat(data$on_base)
+correlation_stat(data$slugging)
+correlation_stat(data$ob_slg)
+non_traditional_stats = (correlation_stat(data$on_base)+
+                           correlation_stat(data$slugging)+
+                           correlation_stat(data$ob_slg))/3
+non_traditional_stats
+traditional_stats = (correlation_stat(data$at_bats)+
+                       correlation_stat(data$hits)+
+                       correlation_stat(data$homeruns)+
+                       correlation_stat(data$bat_avg)+
+                       correlation_stat(data$strikeouts)+
+                       correlation_stat(data$walks)+
+                       correlation_stat(data$stolen_bases))/7
+traditional_stats
+  
+```
+The non traditional stats are better at predicting runs than the traditional variables. The average coefficient of determination for the traditional stats is 0.36 whereas the average coefficient of determination for the non traditional stats is 0.78, since the non traditional stats coefficient is closer to 1 this supports that there is a relation between on_base, slugging, and ob_slg to runs. Of the three non traditional stats on_base plus slugging is the best at predicting runs since it has the coefficient of determination that is closest t0 1.0.
